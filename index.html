@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+    <html>
+      <head>
+        <title>Space Invaders</title>
+        <style>
+          canvas {
+            border: 2px solid #333;
+            background-color: #123;
+          }
+          .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 20px auto;
+          }
+          .score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+          }
+          .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 48px;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="game-container">
+          <canvas id="gameCanvas" width="800" height="600"></canvas>
+          <div class="score">Score: <span id="score">0</span></div>
+          <div class="game-over" id="gameOver">Game Over!</div>
+        </div>
+      </body>
+      <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let score = 0;
+        
+        // Player ship
+        let shipX = 400;
+        let shipY = 500;
+        let shipSpeed = 5;
+        let shooting = false;
+        let bullets = [];
+        
+        // Aliens
+        let aliens = [];
+        const alienSpeed = 2;
+        const alienSpacing = 50;
+        let alienInterval = setInterval(createAlien, 1000);
+        
+        function createAlien() {
+          const height = Math.random() * (canvas.height - 32);
+          const x = Math.random() * (canvas.width - 32);
+          aliens.push({x, y: height});
+        }
+        
+        // Bullets
+        let bulletSpeed = 7;
+        let bulletInterval = setInterval(() => {
+          bullets.forEach((bullet, index) => {
+            bullet.y -= bulletSpeed;
+            
+            if (bullet.y < 0) {
+              bullets.splice(index, 1);
+            }
+          });
+        }, 20);
+
+        // Game controls
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowLeft') {
+            shipX = Math.max(0, shipX - shipSpeed);
+          } else if (e.key === 'ArrowRight') {
+            shipX = Math.min(canvas.width - 32, shipX + shipSpeed);
+          }
+          
+          if (e.code === 'Space' && !shooting) {
+            shooting = true;
+            bullets.push({x: shipX + 16, y: shipY - 10});
+          }
+        });
+
+        document.addEventListener('keyup', () => {
+          shooting = false;
+        });
+
+        // Update game state
+        function update() {
+          // Move ship
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          // Move bullets
+          bullets.forEach((bullet, index) => {
+            bullet.y -= bulletSpeed;
+            
+            if (bullet.y > canvas.height) {
+              bullets.splice(index, 1);
+            }
+          });
+
+          // Update and draw ship
+          ctx.fillStyle = 'white';
+          ctx.fillRect(shipX - 16, shipY - 8, 32, 32);
+          
+          // Update and draw bullets
+          bullets.forEach((bullet, index) => {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(bullet.x - 4, bullet.y - 4, 8, 8);
+          });
+
+          // Update and draw aliens
+          aliens.forEach((alien, index) => {
+            alien.y += alienSpeed;
+            
+            if (alien.y > canvas.height) {
+              aliens.splice(index, 1);
+            }
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(alien.x - 16, alien.y - 16, 32, 32);
+          });
+
+          // Check collisions
+          bullets.forEach((bullet, index) => {
+            for (let i = aliens.length - 1; i >= 0; i--) {
+              const distance = Math.abs(bullet.x - aliens[i].x);
+              if (distance < 32 && bullet.y > aliens[i].y + 16) {
+                aliens.splice(i, 1);
+                score += 100;
+                document.getElementById('score').textContent = score;
+              }
+            }
+          });
+
+          // Game over check
+          if (aliens.length === 0) {
+            clearInterval(alienInterval);
+            clearInterval(bulletInterval);
+            document.getElementById('gameOver').style.display = 'block';
+            
+            localStorage.setItem('spaceInvadersScore', score);
+          }
+
+          requestAnimationFrame(update);
+        }
+
+        update();
+      </script>
+    </html>
